@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+
+<html>
+    <head>
+        <meta charset="utf-8">
+        <link rel="stylesheet" href="popup.css"/>
+    </head>
+
+    <body>
+        <div id="popup-content" class="hidden">
+            <div id="popup-content-instance" class="p-content">
+                <h3 class="o-title">Instance Info</h3>
+                <div class="o-text">
+                    <ul>
+                        <li><strong>Version:</strong> <span id="iversion"></span> <span id="itype"></span></li>
+                        <li><strong>Database:</strong> <span id="idatabase"></span></li>
+                        <li><strong>Debug Enabled?</strong> <span id="idebug"></span></li>
+                        <li><strong>Is Testing?</strong> <span id="itesting"></span></li>
+                    </ul>
+                </div>
+            </div>
+            <div id="no-login" class="o-text hidden">
+                <p><strong><a id="popup-login" href="#">Login</a> to get more info</strong></p>
+            </div>
+            <div id="popup-content-session" class="p-content">
+                <h3 class="o-title">Session Info</h3>
+                <div class="o-text">
+                    <ul>
+                        <li><strong>Username:</strong> <span id="iusername"></span></li>
+                        <li><strong>Name:</strong> <span id="iname"></span></li>
+                        <li><strong>Is System?</strong> <span id="isystem"></span></li>
+                        <li><strong>Is Admin?</strong> <span id="iadmin"></span></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+        <div id="error-content" class="hidden p-content">
+            <p><strong>This website not appears to be an Odoo instance.</strong></p>
+        </div>
+        <div id="error-content" class="hidden p-content">
+            <p><strong>Unexpected error has ocurred. Please, refresh the page.</strong></p>
+        </div>
+        <script src="popup.js"></script>
+    </body>
+
+</html>
