@@ -21,7 +21,8 @@
     };
 
     function _updateBadgeInfo () {
-        window.update_badge_info(odooInfo);
+        // Send odooInfo to content script
+        window.postMessage({ type: "UPDATE_BAGDE_INFO", odooInfo: odooInfo }, "*");
     }
 
     function _forceOdooServerVersionDetection () {
@@ -73,7 +74,6 @@
 
     if (typeof OdooObj !== 'undefined') {
         Object.assign(odooInfo, {
-            'type': window.odooVersion,
             'isTesting': OdooObj.testing,
             'debugMethod': _getDebugState() || OdooObj.debug || false,
             'isOdoo': true,

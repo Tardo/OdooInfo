@@ -2,6 +2,7 @@ body {
   background: linear-gradient(150deg, #875A7B 20%, #62495B 80%);
   color: #FFF;
   margin: 0;
+  white-space: nowrap;
 }
 
 #popup-content ul {

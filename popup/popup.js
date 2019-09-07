@@ -4,6 +4,8 @@
 (function () {
     "use strict";
 
+    const BrowserObj = typeof chrome !== 'undefined' ? chrome : browser;
+
     /* Helper function to change popup information */
     function _updateValue(selector, value, valueNotDefined) {
         if (typeof value === 'boolean') {
@@ -25,18 +27,18 @@
     /* Click event to login in the active instance */
     document.querySelector("#popup-login").addEventListener("click", (ev) => {
         ev.preventDefault();
-        browser.tabs.query({active: true, currentWindow: true}, (tabs) => {
+        BrowserObj.tabs.query({active: true, currentWindow: true}, (tabs) => {
             if (tabs.length) {
                 let curURL = new URL(tabs[0].url);
-                browser.tabs.update(tabs[0].id, {url: curURL.origin + '/web'});
+                BrowserObj.tabs.update(tabs[0].id, {url: curURL.origin + '/web'});
             }
         });
     }, false);
 
     /* Request Odoo Info */
-    browser.runtime.sendMessage({message: 'get_odoo_info'}, (response) => {
+    BrowserObj.runtime.sendMessage({message: 'get_odoo_info'}, (response) => {
         document.querySelector("#iversion").textContent = response;
-        if (browser.runtime.lastError) {
+        if (BrowserObj.runtime.lastError) {
             var elm_error = document.querySelector("#error-content");
             elm_error.textContent = "Unexpected error has ocurred. Please, refresh the page.";
             elm_error.classList.remove("hidden");
@@ -52,9 +54,7 @@
                 // Version Instance Values
                 if (response.isOpenERP) {
                     _changeVisibility("#ptesting", false);
-                    _changeVisibility("#itype", false);
                 } else {
-                    _updateValue("#itype", `(${response.type})`);
                     _updateValue("#itesting", response.isTesting);
                 }
 

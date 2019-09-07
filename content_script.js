@@ -10,6 +10,8 @@
     }
     window.hasRun = true;
 
+    const BrowserObj = typeof chrome !== 'undefined' ? chrome : browser;
+
     /* Helper function to inject an script */
     function _injectPageScript(script) {
         let script_page = document.createElement('script');
@@ -17,26 +19,32 @@
         script_page.onload = () => {
             script_page.parentNode.removeChild(script_page);
         };
-        script_page.src = browser.extension.getURL(script);
+        script_page.src = BrowserObj.extension.getURL(script);
     }
 
-    /* Shared function to update badge info */
-    function update_badge_info(odooInfo) {
-        _sendSanitezBackgroundMessage(odooInfo);
-    }
-    /* Firefox */
-    exportFunction(update_badge_info, window, {defineAs:'update_badge_info'});
-    /* End Firefox */
+    /* Shared event to update badge info */
+    window.addEventListener("message", (event) => {
+        // We only accept messages from ourselves
+        if (event.source !== window) {
+            return;
+        }
+        if (event.data.odooInfo && event.data.type === "UPDATE_BAGDE_INFO") {
+            _sendBackgroundMessage(event.data.odooInfo);
+        }
+    }, false);
 
     /* Send santized message to background */
-    function _sendSanitezBackgroundMessage(odooInfo) {
-        browser.runtime.sendMessage({
+    function _sendBackgroundMessage(odooInfo) {
+        if (typeof odooInfo !== 'object') {
+            return;
+        }
+        BrowserObj.runtime.sendMessage({
             message: 'update_badge_info',
             odooInfo: odooInfo,
         });
     }
 
-    browser.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    BrowserObj.runtime.onMessage.addListener((request, sender, sendResponse) => {
         if (request.message === 'update_odoo_info') {
             _injectPageScript('page_script.js');
         }
