@@ -7,9 +7,19 @@
     /* Helper function to change popup information */
     function _updateValue(selector, value, valueNotDefined) {
         if (typeof value === 'boolean') {
-            value = value & "Yes" || "No";
+            value = value && "Yes" || "No";
         }
         document.querySelector(selector).textContent = value || valueNotDefined || 'Unknown';
+    }
+
+    /* Helper function to change element visibility **/
+    function _changeVisibility(selector, isVisible) {
+        const elm = document.querySelector(selector);
+        if (isVisible) {
+            elm.classList.remove("hidden");
+        } else {
+            elm.classList.add("hidden");
+        }
     }
 
     /* Click event to login in the active instance */
@@ -33,30 +43,37 @@
             document.querySelector("#popup-content").classList.add("hidden");
         }
         else if (response) {
-            if (response.is_odoo) {
-                // Instance Values
+            if (response.isOdoo) {
+                // Common Instance Values
                 _updateValue("#iversion", response.version);
-                _updateValue("#itype", `(${response.type})`);
                 _updateValue("#idatabase", response.database);
-                _updateValue("#idebug", response.is_debug);
-                _updateValue("#itesting", response.is_testing);
+                _updateValue("#idebug", response.debugMethod);
+
+                // Version Instance Values
+                if (response.isOpenERP) {
+                    _changeVisibility("#ptesting", false);
+                    _changeVisibility("#itype", false);
+                } else {
+                    _updateValue("#itype", `(${response.type})`);
+                    _updateValue("#itesting", response.isTesting);
+                }
 
                 if (response.username) {
                     // Session Values
                     _updateValue("#iusername", response.username);
                     _updateValue("#iname", response.name);
-                    _updateValue("#iadmin", response.is_admin);
-                    _updateValue("#isystem", response.is_system);
+                    _updateValue("#iadmin", response.isAdmin);
+                    _updateValue("#isystem", response.isSystem);
                 } else {
-                    document.querySelector("#popup-content-session").classList.add("hidden");
+                    _changeVisibility("#popup-content-session", false);
                 }
 
                 if (!response.username) {
-                    document.querySelector("#no-login").classList.remove("hidden");
+                    _changeVisibility("#no-login", true);
                 }
-                document.querySelector("#popup-content").classList.remove("hidden");
+                _changeVisibility("#popup-content", true);
             } else {
-                document.querySelector("#error-content").classList.remove("hidden");
+                _changeVisibility("#error-content", true);
             }
         }
     });

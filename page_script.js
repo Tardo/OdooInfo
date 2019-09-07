@@ -4,83 +4,81 @@
 (function () {
     "use strict";
 
-    function _writeDataset (data) {
-        /* Helper function to parse value */
-        const _parseValue = (value) => {
-            switch (typeof value) {
-                case 'boolean':
-                    return value && "1" || "0";
-                case 'undefined':
-                    return '';
-                default:
-                    return value;
-            }
-        }
-
-        let dataset = {};
-        // Sanitize var name (is_example -> IsExample)
-        for (let key of Object.keys(data)) {
-            let name = key.charAt(0).toLowerCase();
-            for (var i=1; i<key.length; ++i) {
-                let curChar = key.charAt(i);
-                if  (curChar === '_') {
-                    name += key.charAt(++i).toUpperCase();
-                    continue;
-                }
-                name += curChar;
-            }
-            dataset[name] = _parseValue(data[key]);
-        }
-
-        // Send data to content script
-        window.update_badge_info(dataset);
-    }
-
-    function _forceOdooServerVersionDetection (data) {
-        odoo.define('odooInfo.extension', function(require) {
-            require('web.ajax').rpc('/jsonrpc', {
-                'service': 'db',
-                'method': 'server_version',
-                'args': {}
-            }).always(function (res) {
-                if (!_.isUndefined(res)) {
-                    data.version = res;
-                    _writeDataset(data);
-                }
-            });
-        });
-    }
-
+    const OdooObj = window.openerp || window.odoo;
 
     let odooInfo = {
         'type': '',
         'version': '',
         'username': '',
         'name': '',
-        'is_system': false,
-        'is_admin': false,
+        'isSystem': false,
+        'isAdmin': false,
         'database': '',
-        'is_debug': false,
-        'is_testing': false,
-        'is_odoo': false
+        'isDebug': false,
+        'isResting': false,
+        'isOdoo': false,
+        'isOpenERP': Boolean('openerp' in window),
     };
+
+    function _updateBadgeInfo () {
+        window.update_badge_info(odooInfo);
+    }
+
+    function _forceOdooServerVersionDetection () {
+        var done_method = (res) => {
+            if (!_.isUndefined(res)) {
+                odooInfo.version = res;
+                _updateBadgeInfo();
+            }
+        }
+        const rpc_params = {
+            'service': 'db',
+            'method': 'server_version',
+            'args': {}
+        };
+        if (odooInfo.isOpenERP) {
+            OdooObj.jsonRpc('/jsonrpc', 'service', rpc_params)
+                .then(done_method);
+        } else {
+            OdooObj.define(0, function(require) {
+                require('web.ajax').rpc('/jsonrpc', rpc_params)
+                    .then(done_method);
+            });
+        }
+    }
+
+    function _getDebugState () {
+        const search_map = new Map(
+            window.location.search.substr(1).split('&')
+                .map((item) => { return item.split('='); })
+        );
+        let debug = search_map.get('debug');
+        if (typeof debug === 'undefined') {
+            return false;
+        } else if (debug !== 'assets') {
+            debug = 'normal';
+        }
+        return debug.charAt(0).toUpperCase() + debug.substr(1).toLowerCase();
+    }
+
     let sessionMap = new Map([
         ['server_version', 'version'],
         ['username', 'username'],
         ['name', 'name'],
-        ['is_system', 'is_system'],
-        ['is_admin', 'is_admin'],
-        ['db', 'database']
+        ['is_system', 'isSystem'],
+        ['is_admin', 'isAdmin'],
+        ['db', 'database'],
+        ['is_superuser', 'isAdmin'],
     ]);
 
-    if ('odoo' in window && 'odooVersion' in window) {
+    if (typeof OdooObj !== 'undefined') {
         Object.assign(odooInfo, {
-            'type': window.odooVersion || '',
-            'is_debug': window.odoo.debug,
-            'is_testing': window.odoo.testing,
-            'is_odoo': true
+            'type': window.odooVersion,
+            'isTesting': OdooObj.testing,
+            'debugMethod': _getDebugState() || OdooObj.debug || false,
+            'isOdoo': true,
         });
-        const odoo_session = window.odoo.session_info;
+        const odoo_session = OdooObj.session_info;
         if (odoo_session) {
             for (let key of Object.keys(odoo_session)) {
                 if (sessionMap.has(key)) {
@@ -88,13 +86,12 @@
                     odooInfo[key2] = odoo_session[key];
                 }
             }
-            if (!('server_version' in odoo_session)
-                    || !odoo_session.server_version) {
-                _forceOdooServerVersionDetection(odooInfo);
-            }
-        } else {
-            _forceOdooServerVersionDetection(odooInfo);
+        }
+        if (!odoo_session || !('server_version' in odoo_session)
+                || !odoo_session.server_version) {
+            _forceOdooServerVersionDetection();
         }
     }
-    _writeDataset(odooInfo);
+
+    _updateBadgeInfo();
 })();

@@ -29,7 +29,7 @@
     }
 
     function _updateBadgeInfo (odooInfo) {
-        let icon = `icons/odoo-info${odooInfo.is_odoo && '-' || '-disabled-'}16.png`;
+        let icon = `icons/odoo-info${odooInfo.isOdoo && '-' || '-disabled-'}16.png`;
         let text = odooInfo.version;
         browser.browserAction.setIcon({path: icon});
         browser.browserAction.setBadgeText({text: text});
