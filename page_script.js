@@ -38,9 +38,16 @@
             'args': {}
         };
         if (odooInfo.isOpenERP) {
-            OdooObj.jsonRpc('/jsonrpc', 'service', rpc_params)
-                .then(done_method);
-        } else {
+            if ('jsonRpc' in OdooObj) {
+                OdooObj.jsonRpc('/jsonrpc', 'service', rpc_params)
+                    .then(done_method);
+            } else if ('webclient' in OdooObj && 'rpc' in OdooObj.webclient) {
+                OdooObj.webclient.rpc('/jsonrpc', rpc_params)
+                    .then(done_method);
+            } else if ('client' in OdooObj && 'rpc' in OdooObj.client) {
+                OdooObj.client.rpc('/jsonrpc', rpc_params).then(done_method);
+            }
+        } else if ('define' in OdooObj) {
             OdooObj.define(0, function(require) {
                 require('web.ajax').rpc('/jsonrpc', rpc_params)
                     .then(done_method);
