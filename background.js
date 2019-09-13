@@ -6,24 +6,17 @@
 
     const BrowserObj = typeof chrome !== 'undefined' ? chrome : browser;
     let _lastOdooInfo = false;
-    let running = false;
 
     /* Refresh browser action icon */
-    function refresh_odoo_info (odooInfo) {
-        if (running) {
-            return;
-        }
-        running = true;
+    function refreshOdooInfo (tabId, changeInfo, tabInfo) {
         BrowserObj.browserAction.setIcon({path: 'icons/odoo-info-disabled-16.png'});
         BrowserObj.browserAction.setBadgeText({text: ''});
         /* Query for active tab */
         BrowserObj.tabs.query({active: true, currentWindow: true}, (tabs) => {
             if (tabs.length) {
-                let fallback = setTimeout(() => { running = false; }, 800);
                 /* Request Odoo Info */
-                BrowserObj.tabs.sendMessage(tabs[0].id, {message: 'update_odoo_info'}, (response) => {
-                    clearTimeout(fallback);
-                    running = false;
+                BrowserObj.tabs.sendMessage(tabs[0].id, {
+                    message: 'update_odoo_info',
                 });
             }
         });
@@ -46,8 +39,6 @@
         }
     });
 
-    BrowserObj.tabs.onActivated.addListener(refresh_odoo_info);
-    BrowserObj.tabs.onUpdated.addListener(refresh_odoo_info);
-    BrowserObj.windows.onFocusChanged.addListener(refresh_odoo_info);
+    BrowserObj.tabs.onUpdated.addListener(refreshOdooInfo);
 
 })();

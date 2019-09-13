@@ -11,6 +11,19 @@
     window.hasRun = true;
 
     const BrowserObj = typeof chrome !== 'undefined' ? chrome : browser;
+    let OdooInfoObj = {
+        'type': '',
+        'version': '',
+        'username': '',
+        'name': '',
+        'isSystem': false,
+        'isAdmin': false,
+        'database': '',
+        'isDebug': false,
+        'isTesting': false,
+        'isOdoo': false,
+        'isLoaded': false,
+    };
 
     /* Helper function to inject an script */
     function _injectPageScript(script) {
@@ -22,31 +35,42 @@
         script_page.src = BrowserObj.extension.getURL(script);
     }
 
-    /* Shared event to update badge info */
+    /* Listen messages from page script */
     window.addEventListener("message", (event) => {
         // We only accept messages from ourselves
         if (event.source !== window) {
             return;
         }
         if (event.data.odooInfo && event.data.type === "UPDATE_BAGDE_INFO") {
-            _sendBackgroundMessage(event.data.odooInfo);
+            _updateOdooInfo(event.data.odooInfo);
         }
     }, false);
 
-    /* Send santized message to background */
-    function _sendBackgroundMessage(odooInfo) {
-        if (typeof odooInfo !== 'object') {
-            return;
+    /* Listen messages from background */
+    BrowserObj.runtime.onMessage.addListener((request, sender, sendResponse) => {
+        if (request.message === 'update_odoo_info') {
+            if (OdooInfoObj.isLoaded) {
+                _sendOdooInfoToBackground();
+            } else {
+                _injectPageScript('page_script.js');
+            }
         }
+    });
+
+    /* Send Odoo Info to background */
+    function _sendOdooInfoToBackground() {
         BrowserObj.runtime.sendMessage({
             message: 'update_badge_info',
-            odooInfo: odooInfo,
+            odooInfo: OdooInfoObj,
         });
     }
 
-    BrowserObj.runtime.onMessage.addListener((request, sender, sendResponse) => {
-        if (request.message === 'update_odoo_info') {
-            _injectPageScript('page_script.js');
+    /* Update Odoo Info */
+    function _updateOdooInfo(odooInfo) {
+        if (typeof odooInfo !== 'object') {
+            return;
         }
-    });
+        Object.assign(OdooInfoObj, odooInfo, {isLoaded: true});
+        _sendOdooInfoToBackground();
+    }
 })();

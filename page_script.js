@@ -1,58 +1,89 @@
 // Copyright 2019 Alexandre Díaz
+// NOTE: Use underscore only if the page is and Odoo instance
 
 
 (function () {
     "use strict";
 
-    const OdooObj = window.openerp || window.odoo;
-
-    let odooInfo = {
-        'type': '',
-        'version': '',
-        'username': '',
-        'name': '',
-        'isSystem': false,
-        'isAdmin': false,
-        'database': '',
-        'isDebug': false,
-        'isResting': false,
-        'isOdoo': false,
-        'isOpenERP': Boolean('openerp' in window),
-    };
+    const OdooObj = window.odoo || window.openerp;
+    let odooInfo = {};
 
     function _updateBadgeInfo () {
         // Send odooInfo to content script
-        window.postMessage({ type: "UPDATE_BAGDE_INFO", odooInfo: odooInfo }, "*");
+        window.postMessage({
+            type: "UPDATE_BAGDE_INFO",
+            odooInfo: odooInfo
+        }, "*");
     }
 
-    function _forceOdooServerVersionDetection () {
-        var done_method = (res) => {
-            if (!_.isUndefined(res)) {
-                odooInfo.version = res;
-                _updateBadgeInfo();
-            }
+    function _createRpc (url, fct_name, params, onFulfilled, onRejected) {
+        if (!('args' in params)) {
+            params.args = {};
         }
-        const rpc_params = {
-            'service': 'db',
-            'method': 'server_version',
-            'args': {}
-        };
         if (odooInfo.isOpenERP) {
             if ('jsonRpc' in OdooObj) {
-                OdooObj.jsonRpc('/jsonrpc', 'service', rpc_params)
-                    .then(done_method);
+                OdooObj.jsonRpc(url, fct_name, params).then(onFulfilled, onRejected);
             } else if ('webclient' in OdooObj && 'rpc' in OdooObj.webclient) {
-                OdooObj.webclient.rpc('/jsonrpc', rpc_params)
-                    .then(done_method);
+                OdooObj.webclient.rpc(url, params).then(onFulfilled, onRejected);
             } else if ('client' in OdooObj && 'rpc' in OdooObj.client) {
-                OdooObj.client.rpc('/jsonrpc', rpc_params).then(done_method);
+                OdooObj.client.rpc(url, params).then(onFulfilled, onRejected);
             }
         } else if ('define' in OdooObj) {
             OdooObj.define(0, function(require) {
-                require('web.ajax').rpc('/jsonrpc', rpc_params)
-                    .then(done_method);
+                var ajax = require('web.ajax');
+                if ('rpc' in ajax) {
+                    ajax.rpc(url, params).then(onFulfilled, onRejected);
+                } else if ('jsonRpc' in ajax) {
+                    ajax.jsonRpc(url, fct_name, params).then(onFulfilled, onRejected);
+                }
             });
         }
+    }
+
+    // function _createModelRpc (params, onFulfilled, onRejected) {
+    //     _createRpc('/web/dataset/call_kw', 'call', params, onFulfilled, onRejected);
+    // }
+
+    function _createServiceRpc (params, onFulfilled, onRejected) {
+        _createRpc('/jsonrpc', 'service', params, onFulfilled, onRejected);
+    }
+
+    function _forceOdooServerVersionDetection () {
+        _createServiceRpc({
+            'service': 'db',
+            'method': 'server_version',
+        }, (version) => {
+            if (!_.isUndefined(version) && typeof version === 'string') {
+                odooInfo.version = version;
+                _updateBadgeInfo();
+            }
+        });
+    }
+
+    const orig_console_error_func = console.error;
+    function _forceOdooServerDatabases () {
+        // Monkey Patch to hide access denied error
+        console.error = () => {};
+        // Do rpc
+        _createServiceRpc({
+            'service': 'db',
+            'method': 'list',
+        }, (databases) => {
+            // Revert Monkey Patch
+            console.error = orig_console_error_func;
+            // Check rpc response
+            if (!_.isUndefined(databases) && typeof databases === 'object') {
+                if (databases.length === 1) {
+                    // If only one, use it instead of use the array
+                    databases = databases[0];
+                }
+                odooInfo.database = databases;
+                _updateBadgeInfo();
+            }
+        }, () => {
+            // Revert Monkey Patch
+            console.error = orig_console_error_func;
+        });
     }
 
     function _getDebugState () {
@@ -84,6 +115,7 @@
             'isTesting': OdooObj.testing,
             'debugMethod': _getDebugState() || OdooObj.debug || false,
             'isOdoo': true,
+            'isOpenERP': Boolean('openerp' in window),
         });
         const odoo_session = OdooObj.session_info;
         if (odoo_session) {
@@ -94,9 +126,11 @@
                 }
             }
         }
-        if (!odoo_session || !('server_version' in odoo_session)
-                || !odoo_session.server_version) {
+        if (!odooInfo.version) {
             _forceOdooServerVersionDetection();
+        }
+        if (!odooInfo.database) {
+            _forceOdooServerDatabases();
         }
     }
 

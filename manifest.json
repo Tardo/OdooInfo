@@ -2,7 +2,7 @@
 
   "manifest_version": 2,
   "name": "Odoo Info",
-  "version": "2.2",
+  "version": "3.0",
   "short_name": "Odoo Info",
   "description": "Shows info about instance",
 

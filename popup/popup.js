@@ -35,6 +35,20 @@
         });
     }, false);
 
+    /* Click event to open binary image viewer */
+    document.querySelector("#open-bin-viewer").addEventListener("click", (ev) => {
+        ev.preventDefault();
+        BrowserObj.tabs.query({active: true, currentWindow: true}, (tabs) => {
+            if (tabs.length) {
+                let curURL = new URL(tabs[0].url);
+                BrowserObj.tabs.create({
+                    url: `/tools/binary_viewer/binary_viewer.html#origin=${curURL.origin}&model=ir.attachment&field=datas`,
+                    active: true,
+                });
+            }
+        });
+    }, false);
+
     /* Request Odoo Info */
     BrowserObj.runtime.sendMessage({message: 'get_odoo_info'}, (response) => {
         document.querySelector("#iversion").textContent = response;
@@ -48,8 +62,15 @@
             if (response.isOdoo) {
                 // Common Instance Values
                 _updateValue("#iversion", response.version);
-                _updateValue("#idatabase", response.database);
                 _updateValue("#idebug", response.debugMethod);
+                if (typeof response.database === 'object') {
+                    const title = document.querySelector('#pdatabase strong');
+                    title.textContent = 'Databases:'
+                    _updateValue("#idatabase",
+                        response.database.reverse().join(' - '));
+                } else {
+                  _updateValue("#idatabase", response.database);
+                }
 
                 // Version Instance Values
                 if (response.isOpenERP) {
