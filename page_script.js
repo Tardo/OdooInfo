@@ -112,12 +112,11 @@
 
     if (typeof OdooObj !== 'undefined') {
         Object.assign(odooInfo, {
-            'isTesting': OdooObj.testing,
             'debugMethod': _getDebugState() || OdooObj.debug || false,
             'isOdoo': true,
             'isOpenERP': Boolean('openerp' in window),
         });
-        const odoo_session = OdooObj.session_info;
+        const odoo_session = OdooObj.session_info || OdooObj.session;
         if (odoo_session) {
             for (let key of Object.keys(odoo_session)) {
                 if (sessionMap.has(key)) {

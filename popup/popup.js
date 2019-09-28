@@ -72,13 +72,6 @@
                   _updateValue("#idatabase", response.database);
                 }
 
-                // Version Instance Values
-                if (response.isOpenERP) {
-                    _changeVisibility("#ptesting", false);
-                } else {
-                    _updateValue("#itesting", response.isTesting);
-                }
-
                 if (response.username) {
                     // Session Values
                     _updateValue("#iusername", response.username);
@@ -89,7 +82,7 @@
                     _changeVisibility("#popup-content-session", false);
                 }
 
-                if (!response.username) {
+                if (!response.database) {
                     _changeVisibility("#no-login", true);
                 }
                 _changeVisibility("#popup-content", true);

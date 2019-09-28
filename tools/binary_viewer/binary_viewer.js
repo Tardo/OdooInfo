@@ -1,8 +1,28 @@
 "use strict";
 
+const INITIAL_LOAD_RECORDS_NUM = 200;
+const STEP_LOAD_RECORDS_NUM = 50;
+
 let origin = '';
 let model = '';
 let field = '';
+
+function clearAllChilds (parent) {
+    let child = false;
+    while (child = parent.firstChild) {
+        parent.removeChild(child);
+    }
+}
+
+function safeInnerHTML (elm, html) {
+    clearAllChilds(elm);
+    const parser = new DOMParser();
+    const parsed = parser.parseFromString(html, 'text/html');
+    const elms = parsed.getElementsByTagName('body');
+    for (const el of elms) {
+        elm.appendChild(el);
+    }
+}
 
 let imageID = 0;
 let numImgFailed = 0;
@@ -19,14 +39,8 @@ function loadImages (maxImagesToLoad) {
             const elfile = document.createElement('a');
             elfile.href = ev.target.src;
             elfile.classList.add('file');
+            safeInnerHTML(elfile, `<span>- ERROR -<br/>#${numImgFailed++}<br/><br/>¯\\_(ツ)_/¯</span>`);
             parent.removeChild(ev.target);
-            const failed_html = `<span>- ERROR -<br/>#${numImgFailed++}<br/><br/>¯\\_(ツ)_/¯</span>`;
-            const parser = new DOMParser();
-            const parsed = parser.parseFromString(failed_html, 'text/html');
-            const elms = parsed.getElementsByTagName('body');
-            for (const el of elms) {
-                elfile.appendChild(el);
-            }
             parent.appendChild(elfile);
         });
         container.appendChild(img);
@@ -37,7 +51,7 @@ function loadImages (maxImagesToLoad) {
 
 function onScroll (ev) {
     if (document.scrollingElement.scrollTop === document.scrollingElement.scrollTopMax) {
-        loadImages(50);
+        loadImages(STEP_LOAD_RECORDS_NUM);
     }
 }
 
@@ -61,10 +75,10 @@ window.onload = () => {
             imageID = 0;
             ev.target.value = imageID;
         }
-        loadImages(50);
+        loadImages(STEP_LOAD_RECORDS_NUM);
     }, false);
 
     // Load images
-    loadImages(200);
+    loadImages(INITIAL_LOAD_RECORDS_NUM);
 }
 window.addEventListener("scroll", onScroll);
