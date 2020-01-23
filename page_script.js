@@ -1,4 +1,5 @@
-// Copyright 2019 Alexandre Díaz
+/* global Map */
+// Copyright 2019-2020 Alexandre Díaz
 // NOTE: Use underscore only if the page is and Odoo instance
 
 
@@ -6,13 +7,13 @@
     "use strict";
 
     const OdooObj = window.odoo || window.openerp;
-    let odooInfo = {};
+    const odooInfo = {};
 
     function _updateBadgeInfo () {
         // Send odooInfo to content script
         window.postMessage({
             type: "UPDATE_BAGDE_INFO",
-            odooInfo: odooInfo
+            odooInfo: odooInfo,
         }, "*");
     }
 
@@ -20,29 +21,28 @@
         if (!('args' in params)) {
             params.args = {};
         }
-        if (odooInfo.isOpenERP) {
-            if ('jsonRpc' in OdooObj) {
-                OdooObj.jsonRpc(url, fct_name, params).then(onFulfilled, onRejected);
-            } else if ('webclient' in OdooObj && 'rpc' in OdooObj.webclient) {
-                OdooObj.webclient.rpc(url, params).then(onFulfilled, onRejected);
-            } else if ('client' in OdooObj && 'rpc' in OdooObj.client) {
-                OdooObj.client.rpc(url, params).then(onFulfilled, onRejected);
-            }
-        } else if ('define' in OdooObj) {
-            OdooObj.define(0, function(require) {
-                var ajax = require('web.ajax');
-                if ('rpc' in ajax) {
-                    ajax.rpc(url, params).then(onFulfilled, onRejected);
-                } else if ('jsonRpc' in ajax) {
-                    ajax.jsonRpc(url, fct_name, params).then(onFulfilled, onRejected);
-                }
-            });
-        }
+
+        $.ajax(url, {
+            url: url,
+            dataType: 'json',
+            type: 'POST',
+            data: JSON.stringify({
+                jsonrpc: "2.0",
+                method: fct_name,
+                params: params,
+                id: Math.floor(Math.random() * 1000 * 1000 * 1000),
+            }),
+            contentType: 'application/json',
+        }).then(onFulfilled, onRejected);
     }
 
-    // function _createModelRpc (params, onFulfilled, onRejected) {
-    //     _createRpc('/web/dataset/call_kw', 'call', params, onFulfilled, onRejected);
-    // }
+    // eslint-disable-next-line
+    /*
+    function _createModelRpc (params, onFulfilled, onRejected) {
+        _createRpc('/web/dataset/call_kw', 'call', params, onFulfilled,
+                   onRejected);
+    }
+    */
 
     function _createServiceRpc (params, onFulfilled, onRejected) {
         _createRpc('/jsonrpc', 'service', params, onFulfilled, onRejected);
@@ -52,7 +52,8 @@
         _createServiceRpc({
             'service': 'db',
             'method': 'server_version',
-        }, (version) => {
+        }, (rpc_response) => {
+            const version = rpc_response.result;
             if (!_.isUndefined(version) && typeof version === 'string') {
                 odooInfo.version = version;
                 _updateBadgeInfo();
@@ -60,36 +61,32 @@
         });
     }
 
-    const orig_console_error_func = console.error;
     function _forceOdooServerDatabases () {
-        // Monkey Patch to hide access denied error
-        console.error = () => {};
         // Do rpc
         _createServiceRpc({
             'service': 'db',
             'method': 'list',
-        }, (databases) => {
-            // Revert Monkey Patch
-            console.error = orig_console_error_func;
+        }, (rpc_response) => {
+            const databases = rpc_response.result;
             // Check rpc response
-            if (!_.isUndefined(databases) && typeof databases === 'object') {
+            if (!_.isUndefined(databases) && Array.isArray(databases)) {
                 if (databases.length === 1) {
                     // If only one, use it instead of use the array
-                    databases = databases[0];
+                    odooInfo.database = databases[0];
+                } else {
+                    odooInfo.database = databases;
                 }
-                odooInfo.database = databases;
                 _updateBadgeInfo();
             }
-        }, () => {
-            // Revert Monkey Patch
-            console.error = orig_console_error_func;
         });
     }
 
     function _getDebugState () {
         const search_map = new Map(
             window.location.search.substr(1).split('&')
-                .map((item) => { return item.split('='); })
+                .map(function (item) {
+                    return item.split('=');
+                })
         );
         let debug = search_map.get('debug');
         if (typeof debug === 'undefined') {
@@ -100,7 +97,7 @@
         return debug.charAt(0).toUpperCase() + debug.substr(1).toLowerCase();
     }
 
-    let sessionMap = new Map([
+    const sessionMap = new Map([
         ['server_version', 'version'],
         ['username', 'username'],
         ['name', 'name'],
@@ -118,7 +115,7 @@
         });
         const odoo_session = OdooObj.session_info || OdooObj.session;
         if (odoo_session) {
-            for (let key of Object.keys(odoo_session)) {
+            for (const key of Object.keys(odoo_session)) {
                 if (sessionMap.has(key)) {
                     const key2 = sessionMap.get(key);
                     odooInfo[key2] = odoo_session[key];
@@ -134,4 +131,4 @@
     }
 
     _updateBadgeInfo();
-})();
+}());

@@ -2,7 +2,7 @@
 
   "manifest_version": 2,
   "name": "Odoo Info",
-  "version": "3.1",
+  "version": "3.2",
   "short_name": "Odoo Info",
   "description": "Shows info about instance",
 
@@ -28,7 +28,8 @@
   "content_scripts": [
     {
       "matches": ["<all_urls>"],
-      "js": ["content_script.js"]
+      "js": ["content_script.js"],
+      "run_at": "document_idle"
     }
   ],
 

@@ -1,7 +1,8 @@
-// Copyright 2019 Alexandre Díaz
+/* global browser, chrome */
+// Copyright 2019-2020 Alexandre Díaz
 
 
-(function() {
+(function () {
     "use strict";
 
     /* Flag to run the script once */
@@ -10,8 +11,8 @@
     }
     window.hasRun = true;
 
-    const BrowserObj = typeof chrome !== 'undefined' ? chrome : browser;
-    let OdooInfoObj = {
+    const BrowserObj = typeof chrome === 'undefined' ? browser : chrome;
+    const OdooInfoObj = {
         'type': '',
         'version': '',
         'username': '',
@@ -25,9 +26,26 @@
         'isLoaded': false,
     };
 
+    /* Send Odoo Info to background */
+    function _sendOdooInfoToBackground () {
+        BrowserObj.runtime.sendMessage({
+            message: 'update_badge_info',
+            odooInfo: OdooInfoObj,
+        });
+    }
+
+    /* Update Odoo Info */
+    function _updateOdooInfo (odooInfo) {
+        if (typeof odooInfo !== 'object') {
+            return;
+        }
+        Object.assign(OdooInfoObj, odooInfo, {isLoaded: true});
+        _sendOdooInfoToBackground();
+    }
+
     /* Helper function to inject an script */
-    function _injectPageScript(script) {
-        let script_page = document.createElement('script');
+    function _injectPageScript (script) {
+        const script_page = document.createElement('script');
         (document.head || document.documentElement).appendChild(script_page);
         script_page.onload = () => {
             script_page.parentNode.removeChild(script_page);
@@ -47,7 +65,7 @@
     }, false);
 
     /* Listen messages from background */
-    BrowserObj.runtime.onMessage.addListener((request, sender, sendResponse) => {
+    BrowserObj.runtime.onMessage.addListener((request) => {
         if (request.message === 'update_odoo_info') {
             if (OdooInfoObj.isLoaded) {
                 _sendOdooInfoToBackground();
@@ -56,21 +74,4 @@
             }
         }
     });
-
-    /* Send Odoo Info to background */
-    function _sendOdooInfoToBackground() {
-        BrowserObj.runtime.sendMessage({
-            message: 'update_badge_info',
-            odooInfo: OdooInfoObj,
-        });
-    }
-
-    /* Update Odoo Info */
-    function _updateOdooInfo(odooInfo) {
-        if (typeof odooInfo !== 'object') {
-            return;
-        }
-        Object.assign(OdooInfoObj, odooInfo, {isLoaded: true});
-        _sendOdooInfoToBackground();
-    }
-})();
+}());
