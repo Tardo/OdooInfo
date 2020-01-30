@@ -122,11 +122,23 @@
                 }
             }
         }
-        if (!odooInfo.version) {
-            _forceOdooServerVersionDetection();
-        }
-        if (!odooInfo.database) {
-            _forceOdooServerDatabases();
+
+        const forceDectection = () => {
+            if (!odooInfo.version) {
+                _forceOdooServerVersionDetection();
+            }
+            if (!odooInfo.database) {
+                _forceOdooServerDatabases();
+            }
+        };
+
+        try {
+            OdooObj.define(0, (require) => {
+                require('web.core');
+                forceDectection();
+            });
+        } catch (exception) {
+            forceDectection();
         }
     }
 
