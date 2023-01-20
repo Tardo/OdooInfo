@@ -9,6 +9,17 @@
     const OdooObj = window.odoo || window.openerp;
     const odooInfo = {};
 
+    /* Listen messages from page script */
+    window.addEventListener("message", (event) => {
+        // We only accept messages from ourselves
+        if (event.source !== window) {
+            return;
+        }
+        if (event.data.type === "OBTAIN_ODOO_INFO") {
+            refreshOdooInfo();
+        }
+    }, false);
+
     function _updateBadgeInfo () {
         // Send odooInfo to content script
         window.postMessage({
@@ -35,14 +46,6 @@
             contentType: 'application/json',
         }).then(onFulfilled, onRejected);
     }
-
-    // eslint-disable-next-line
-    /*
-    function _createModelRpc (params, onFulfilled, onRejected) {
-        _createRpc('/web/dataset/call_kw', 'call', params, onFulfilled,
-                   onRejected);
-    }
-    */
 
     function _createServiceRpc (params, onFulfilled, onRejected) {
         _createRpc('/jsonrpc', 'service', params, onFulfilled, onRejected);
@@ -83,7 +86,7 @@
 
     function _getDebugState () {
         const search_map = new Map(
-            window.location.search.substr(1).split('&')
+            window.location.search.substring(1).split('&')
                 .map(function (item) {
                     return item.split('=');
                 })
@@ -94,53 +97,59 @@
         } else if (debug !== 'assets') {
             debug = 'normal';
         }
-        return debug.charAt(0).toUpperCase() + debug.substr(1).toLowerCase();
+        return debug.charAt(0).toUpperCase() + debug.substring(1).toLowerCase();
     }
 
     const sessionMap = new Map([
         ['server_version', 'version'],
+        ['db', 'database'],
         ['username', 'username'],
         ['name', 'name'],
         ['is_system', 'isSystem'],
         ['is_admin', 'isAdmin'],
-        ['db', 'database'],
         ['is_superuser', 'isAdmin'],
     ]);
+    const persistedKeys = ['server_version', 'db'];
 
-    if (typeof OdooObj !== 'undefined') {
-        Object.assign(odooInfo, {
-            'debugMethod': _getDebugState() || OdooObj.debug || false,
-            'isOdoo': true,
-            'isOpenERP': Boolean('openerp' in window),
-        });
-        const odoo_session = OdooObj.session_info || OdooObj.session;
-        if (odoo_session) {
-            for (const key of Object.keys(odoo_session)) {
-                if (sessionMap.has(key)) {
-                    const key2 = sessionMap.get(key);
+    function refreshOdooInfo() {
+        if (typeof OdooObj !== 'undefined') {
+            Object.assign(odooInfo, JSON.parse(sessionStorage.getItem("odooinfo_obj", "value") || "{}"), {
+                'debugMethod': _getDebugState() || OdooObj.debug || false,
+                'isOdoo': true,
+                'isOpenERP': Boolean('openerp' in window),
+            });
+            const odoo_session = OdooObj.session_info || OdooObj.session || odoo.__DEBUG__.services['web.session'] || {};
+            const sessionMapKeys = sessionMap.keys();
+            for (const key of sessionMapKeys) {
+                const key2 = sessionMap.get(key);
+                if (key in odoo_session) {
                     odooInfo[key2] = odoo_session[key];
+                } else if (persistedKeys.indexOf(key) === -1) {
+                    odooInfo[key2] = undefined;
                 }
             }
-        }
+            
+            const forceDectection = () => {
+                if (!odooInfo.version) {
+                    _forceOdooServerVersionDetection();
+                }
+                if (!odooInfo.database) {
+                    _forceOdooServerDatabases();
+                }
+            };
 
-        const forceDectection = () => {
-            if (!odooInfo.version) {
-                _forceOdooServerVersionDetection();
-            }
-            if (!odooInfo.database) {
-                _forceOdooServerDatabases();
-            }
-        };
-
-        try {
-            OdooObj.define(0, (require) => {
-                require('web.core');
+            try {
+                OdooObj.define(0, (require) => {
+                    require('web.core');
+                    forceDectection();
+                });
+            } catch (exception) {
                 forceDectection();
-            });
-        } catch (exception) {
-            forceDectection();
-        }
-    }
+            }
 
-    _updateBadgeInfo();
+            sessionStorage.setItem("odooinfo_obj", JSON.stringify(odooInfo));
+        }
+        _updateBadgeInfo();
+    }
+    refreshOdooInfo();
 }());

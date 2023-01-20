@@ -42,26 +42,6 @@
         });
     }, false);
 
-    /* Click event to open binary image viewer */
-    document.querySelector("#open-bin-viewer")
-        .addEventListener("click", (ev) => {
-            ev.preventDefault();
-            BrowserObj.tabs.query({
-                active: true,
-                currentWindow: true,
-            }, (tabs) => {
-                if (tabs.length) {
-                    const curURL = new URL(tabs[0].url);
-                    BrowserObj.tabs.create({
-                        url: '/tools/binary_viewer/binary_viewer.html' +
-                             `#origin=${curURL.origin}&model=ir.attachment` +
-                             '&field=datas',
-                        active: true,
-                    });
-                }
-            });
-        }, false);
-
     /* Request Odoo Info */
     BrowserObj.runtime.sendMessage({message: 'get_odoo_info'}, (response) => {
         document.querySelector("#iversion").textContent = response;

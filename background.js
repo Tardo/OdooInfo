@@ -14,9 +14,14 @@
             path: 'icons/odoo-info-disabled-16.png',
         });
         BrowserObj.browserAction.setBadgeText({text: ''});
-        // Request Odoo Info
-        BrowserObj.tabs.sendMessage(tabId, {
-            message: 'update_odoo_info',
+        // Query for active tab
+        BrowserObj.tabs.query({active: true, currentWindow: true}, (tabs) => {
+            if (tabs.length) {
+                // Request Odoo Info
+                BrowserObj.tabs.sendMessage(tabs[0].id, {
+                    message: "update_odoo_info",
+                });
+            }
         });
     }
 
@@ -41,5 +46,6 @@
         });
 
     BrowserObj.tabs.onUpdated.addListener(refreshOdooInfo);
+    BrowserObj.tabs.onActivated.addListener(refreshOdooInfo);
 
 }());

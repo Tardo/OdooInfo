@@ -21,7 +21,7 @@ li > img {
 #popup-content ul {
   list-style-type: none;
   margin: 0;
-  padding-left: 1.5em;
+  padding-left: 0.5em;
 }
 #no-login {
   background-color: #F9F9F9;

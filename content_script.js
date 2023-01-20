@@ -68,7 +68,9 @@
     BrowserObj.runtime.onMessage.addListener((request) => {
         if (request.message === 'update_odoo_info') {
             if (OdooInfoObj.isLoaded) {
-                _sendOdooInfoToBackground();
+                window.postMessage({
+                    type: "OBTAIN_ODOO_INFO",
+                }, "*");
             } else {
                 _injectPageScript('page_script.js');
             }
